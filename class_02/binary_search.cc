@@ -21,16 +21,22 @@ int binary_search(vector<int> data, int min, int max, int key){
 
 int main(void){
 
-  vector<int> A(1000);
+  vector<int> sequence(10);
+  int key;
 
-  for (int i = 0; i< A.size(); ++i){
-    A[i] = i + 1;
+
+  for (int i = 0; i< sequence.size(); ++i){
+    sequence[i] = i + 1;
+    cout << sequence[i];
   }
+  cout << endl;
+  
+  cout << "key?";
+  cin >> key;
 
-  int min = 0, max = (int)A.size() - 1;
-  int key = 4;
+  int min = 0, max = (int)sequence.size() - 1;
 
-  printf("Found (Step = %d)\n", binary_search(A, min, max, key));
+  printf("Found (Step = %d)\n", binary_search(sequence, min, max, key));
 
   return 0;
 

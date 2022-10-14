@@ -2,8 +2,8 @@
 #include <vector>
 using namespace std;
 
-#define NUM_BUCKET 100
-#define NUM_ITEM 50
+#define NUM_BUCKET 50
+#define NUM_ITEM 10
 #define DELTA 1
 
 int array[NUM_BUCKET];
@@ -62,7 +62,7 @@ int search_key(int data, int *hash_table) {
 
 int main(void) {
 
-    int i;
+    int i, key;
 
     vector<int> input_datas(NUM_ITEM);
     int hash_table[NUM_BUCKET];
@@ -70,7 +70,9 @@ int main(void) {
     //入力データを作成
     for (i = 0; i<NUM_ITEM; i++){
       input_datas[i] = i+1;
+      cout << input_datas[i];
     }
+    cout << endl;
 
     //ハッシュテーブルを作成
     for (i = 0; i<NUM_BUCKET; i++){
@@ -81,9 +83,11 @@ int main(void) {
     for (i = 0; i < NUM_ITEM; i++) {
         add_to_table(input_datas[i], hash_table);
     }
+    cout << "key?";
+    cin >> key;
 
     /* データの探索 */
-    int step = search_key(4, hash_table);
+    int step = search_key(key, hash_table);
     if (step) {
         printf("FOUND (Step = %d) \n", step);
     }
