@@ -145,7 +145,6 @@ insert_in_internal(NODE *internal, int key, DATA *data)
 NODE *
 insert_in_parent(NODE *leaf, int parent_key, NODE *new_leaf)
 {	
-	int i;
 	NODE *parent_node = NULL;
 
 	if (leaf == Root) {
@@ -166,16 +165,7 @@ insert_in_parent(NODE *leaf, int parent_key, NODE *new_leaf)
 	new_leaf->parent = Root;
 
 	if (parent_node->nkey < N - 1){
-		//debag
-		for(int i = 0; i < N; i++){
-			printf("internal->key = %d\n", parent_node->key[i]);
-		}
-		printf("--------------------------\n");
 		insert_in_internal(parent_node, parent_key, (DATA *)new_leaf);
-		//debag
-		for(int i = 0; i < N; i++){
-			printf("internal->key = %d\n", parent_node->key[i]);
-		}
 	}
 
 	else { //以降はclass_05にて
@@ -224,11 +214,6 @@ insert(int key, DATA *data)
 		temp_block->nkey = 3;
 
 		insert_in_temp_leaf(temp_block, key, data);
-
-		//debag
-		for(int i = 0; i < N; i++){
-			printf("temp_block->key = %d\n", temp_block->key[i]);
-		}
 
 		new_leaf->chi[N - 1] = leaf->chi[N - 1];
 		leaf->chi[N - 1] = new_leaf;
