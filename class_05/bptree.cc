@@ -1,31 +1,44 @@
 #include "bptree.h"
 #include <vector>
-#include <sys/time.h>
 
-NODE *alloc_leaf(NODE *parent);
-NODE *insert_in_leaf(NODE *leaf, int key, DATA *data);
+#define DATA_NUMBER 10000
+
+void
+delete_entry(NODE *node, int key, DATA *data, bool node_is_predecessor);
 
 
-struct timeval
-cur_time(void)
+void
+init_root(void)
 {
-	struct timeval t;
-	gettimeofday(&t, NULL);
-	return t;
+	Root = NULL;
 }
+
+
+int
+interactive()
+{
+  int key;
+
+  std::cout << "Key: ";
+  std::cin >> key;
+
+  return key;
+}
+
 
 void
 print_tree_core(NODE *n)
 {
-	printf("["); 
+	printf("[");
 	for (int i = 0; i < n->nkey; i++) {
 		if (!n->isLeaf) print_tree_core(n->chi[i]);
-		printf("%d", n->key[i]); 
+		printf("%d", n->key[i]);
 		if (i != n->nkey-1 && n->isLeaf) putchar(' ');
 	}
 	if (!n->isLeaf) print_tree_core(n->chi[n->nkey]);
 	printf("]");
 }
+
 
 void
 print_tree(NODE *node)
@@ -33,6 +46,32 @@ print_tree(NODE *node)
 	print_tree_core(node);
 	printf("\n"); fflush(stdout);
 }
+
+
+NODE *
+alloc_leaf(NODE *parent)
+{
+	NODE *node = NULL;
+	if (!(node = (NODE *)calloc(1, sizeof(NODE)))) ERR;
+	node->isLeaf = true;
+	node->parent = parent;
+	node->nkey = 0;
+
+	return node;
+}
+
+
+TEMP *
+alloc_temp(NODE *parent)
+{
+	TEMP *node = NULL;
+	if (!(node = (TEMP *)calloc(1, sizeof(TEMP)))) ERR;
+	node->isLeaf = true;
+	node->nkey = N-1;
+
+	return node;
+}
+
 
 NODE *
 find_leaf(NODE *node, int key)
@@ -47,16 +86,17 @@ find_leaf(NODE *node, int key)
 	return find_leaf(node->chi[kid], key);
 }
 
-NODE *
+
+void
 insert_in_leaf(NODE *leaf, int key, DATA *data)
 {
 	int i;
-	
+
 	if (key < leaf->key[0]) {
 		for (i = leaf->nkey; i > 0; i--) {
 			leaf->chi[i] = leaf->chi[i-1] ;
 			leaf->key[i] = leaf->key[i-1] ;
-		} 
+		}
 		leaf->key[0] = key;
 		leaf->chi[0] = (NODE *)data;
 	}
@@ -64,21 +104,23 @@ insert_in_leaf(NODE *leaf, int key, DATA *data)
 		for (i = 0; i < leaf->nkey; i++) {
 			if (key < leaf->key[i]) break;
 		}
-		for (int j = leaf->nkey; j > i; j--) {		
+		for (int j = leaf->nkey; j > i; j--) {
 			leaf->chi[j] = leaf->chi[j-1] ;
 			leaf->key[j] = leaf->key[j-1] ;
-		} 
+		}
 
 		leaf->key[i] = key;
 		leaf->chi[i] = (NODE *)data;
 
-	}
+		}
+
 	leaf->nkey++;
 
-	return leaf;
+	return;
 }
 
-TEMP *
+
+void
 insert_in_temp_leaf(TEMP *leaf, int key, DATA *data)
 {
 	int i;
@@ -106,8 +148,9 @@ insert_in_temp_leaf(TEMP *leaf, int key, DATA *data)
 
 	leaf->nkey++;
 
-	return leaf;
+	return;
 }
+
 
 void
 insert_in_internal(NODE *internal, int key, DATA *data)
@@ -142,6 +185,7 @@ insert_in_internal(NODE *internal, int key, DATA *data)
 	return;
 }
 
+
 void
 insert_in_temp_internal(TEMP *internal, int key, DATA *data)
 {
@@ -175,208 +219,220 @@ insert_in_temp_internal(TEMP *internal, int key, DATA *data)
 	return;
 }
 
-NODE *
-insert_in_parent(NODE *leaf, int parent_key, NODE *new_leaf)
-{	
-	int i;
-	NODE *parent_node = NULL;
 
-	if (leaf == Root) {
+void
+insert_in_parent(NODE *node, int key, DATA *split_node)
+{
+	NODE *parent_node = NULL;
+	NODE *parent_split_node = NULL;
+	NODE *internal_node = NULL;
+	TEMP *temp = NULL;
+	int i;
+	int grand_parent_key;
+
+
+	if (node == Root)
+	{
 		parent_node = alloc_leaf(NULL);
-		parent_node->isLeaf = false;
-		parent_node->chi[0] = leaf;
-		parent_node->chi[1] = new_leaf;
-		parent_node->key[0] = parent_key;
+		parent_node->key[0] = key;
+		parent_node->chi[0] = node;
+		parent_node->chi[1] = (NODE *)split_node;
 		parent_node->nkey = 1;
 		Root = parent_node;
-		leaf->parent = Root;
-		new_leaf->parent = Root;
+		parent_node->isLeaf = false;
+		node->parent = parent_node;
+		((NODE *)split_node)->parent = parent_node;
 
-		return parent_node;
+		return ;
 	}
 
-	parent_node = leaf->parent;
-	new_leaf->parent = parent_node;
+	parent_node = node->parent;
+	((NODE*)split_node)->parent = parent_node;
 
-	if (parent_node->nkey < N - 1){
-		//debag
-		for(int i = 0; i < N; i++){
-			printf("internal->key = %d\n", parent_node->key[i]);
-		}
-		printf("--------------------------\n");
-		insert_in_internal(parent_node, parent_key, (DATA *)new_leaf);
-		//debag
-		for(int i = 0; i < N; i++){
-			printf("internal->key = %d\n", parent_node->key[i]);
-		}
+	if (parent_node->nkey+1 < N)
+	{
+
+		parent_node->isLeaf = true;
+		internal_node = find_leaf(Root, key);
+
+		insert_in_internal(internal_node, key, split_node);
+
+		parent_node->isLeaf = false;
+
 	}
+	else
+	{
+		temp = alloc_temp(NULL);
 
-	else { //ここがおかしい
-
-		TEMP *temp_block = (TEMP*)alloc_leaf(NULL);
-
-		for(i = 0; i < N - 1; i++){
-			temp_block->key[i] = parent_node->key[i];
+		for(i=0; i<N-1; i++){
+			temp->key[i] = parent_node->key[i];
 		}
-		for(i = 0; i < N; i++){
-			temp_block->chi[i] = parent_node->chi[i];
+		for(i=0; i<N; i++){
+			temp->chi[i] = parent_node->chi[i];
 		}
-		
 
-		temp_block->nkey = 3;
+		insert_in_temp_internal(temp, key, split_node);
 
-		insert_in_temp_internal(temp_block, parent_key, (DATA *)new_leaf);
-		
-		NODE *new_parent_node = alloc_leaf(NULL);
-		new_parent_node->isLeaf = false;
-
-		for(i = 0; i < N - 1; i++){
+		for(i=0;i<N-1;i++){
 			parent_node->key[i] = 0;
 		}
-		for(i = 0; i < N; i++){
+		for(i=0;i<N;i++){
 			parent_node->chi[i] = 0;
 		}
 
-		for(i = 0; i < (N/2); i++){
-			parent_node->key[i] = temp_block->key[i];
+		parent_split_node = alloc_leaf(NULL);
+		parent_split_node->isLeaf = false;
+
+		for(i=0; i<(N/2)+1; i++){
+			parent_node->chi[i] = temp->chi[i];
 		}
-		for(i = 0; i < (N/2)+1; i++){
-			parent_node->chi[i] = temp_block->chi[i];
+		for(i=0; i<(N/2); i++){
+			parent_node->key[i] = temp->key[i];
 		}
 
 		parent_node->nkey = 2;
-
-		for(i = (N/2)+1; i < N; i++){
-			new_parent_node->key[i - (N/2) - 1] = temp_block->key[i];
-		}
+		grand_parent_key = temp->key[(N+1)/2];
 
 		for(i=(N/2)+1; i<N+1; i++){
-			new_parent_node->chi[i-(N/2)-1] = temp_block->chi[i];
-			new_parent_node->chi[i-(N/2)-1]->parent = new_parent_node;
+			parent_split_node->chi[i-(N/2)-1] = temp->chi[i];
+			parent_split_node->chi[i-(N/2)-1]->parent = parent_split_node;
+		}
+		for(i=(N/2)+1; i<N; i++){
+			parent_split_node->key[i-(N/2)-1] = temp->key[i];
 		}
 
-		new_parent_node->nkey = 1;
+		free(temp);
+		temp = NULL;
 
-		int grand_parent_key = temp_block->key[(N+1)/2];
+		parent_split_node->nkey = 1;
 
-		free(temp_block);
-		temp_block = NULL;
-
-		insert_in_parent(parent_node, grand_parent_key, new_parent_node);
+		insert_in_parent(parent_node, grand_parent_key, (DATA *)parent_split_node);
 
 	}
-	return parent_node;	
 }
 
-NODE *
-alloc_leaf(NODE *parent)
-{
-	NODE *node;
-	if (!(node = (NODE *)calloc(1, sizeof(NODE)))) ERR;
-	node->isLeaf = true;
-	node->parent = parent;
-	node->nkey = 0;
 
-	return node;
-}
-
-void 
+void
 insert(int key, DATA *data)
 {
-	NODE *leaf;
+	NODE *leaf = NULL;
+	NODE *split_leaf = NULL;
+	TEMP *temp = NULL;
+	int i;
+	int parent_key;
 
 	if (Root == NULL) {
 		leaf = alloc_leaf(NULL);
 		Root = leaf;
 	}
-  	else {
-    	leaf = find_leaf(Root, key);
-  	}
+  else {
+    leaf = find_leaf(Root, key);
+  }
 
-	if (leaf->nkey < N-1) {
+	if (leaf->nkey < (N-1)) {
 		insert_in_leaf(leaf, key, data);
 	}
 	else {
-		NODE *new_leaf = alloc_leaf(NULL);
-		TEMP *temp_block = (TEMP*)alloc_leaf(NULL);
+		temp = alloc_temp(NULL);
 
-		for(int i = 0; i < N - 1; i++){
-			temp_block->chi[i] = leaf->chi[i];
-			temp_block->key[i] = leaf->key[i];
+		for(i = 0; i<N-1; i++){
+			temp->chi[i] = leaf->chi[i];
+			temp->key[i] = leaf->key[i];
 		}
 
-		temp_block->nkey = 3;
+		insert_in_temp_leaf(temp, key, data);
 
-		insert_in_temp_leaf(temp_block, key, data);
+		split_leaf = alloc_leaf(NULL);
 
-		//debag
-		for(int i = 0; i < N; i++){
-			printf("temp_block->key = %d\n", temp_block->key[i]);
-		}
+		split_leaf->chi[N-1] = leaf->chi[N-1];
+		leaf->chi[N-1] = split_leaf;
 
-		new_leaf->chi[N - 1] = leaf->chi[N - 1];
-		leaf->chi[N - 1] = new_leaf;
-
-		for(int i = 0; i < N - 1; i++){
+		for(i = 0;i<N-1;i++){
 			leaf->chi[i] = 0;
 			leaf->key[i] = 0;
 		}
+		for(i = 0; i<(N/2); i++){
+			leaf->chi[i] = temp->chi[i];
+			leaf->key[i] = temp->key[i];
+		}
 		leaf->nkey = 2;
 
-		for(int i = 0; i < (N/2); i++){
-			leaf->chi[i] = temp_block->chi[i];
-			leaf->key[i] = temp_block->key[i];
+		for(i = (N/2); i<N; i++){
+			split_leaf->chi[i-(N/2)] = temp->chi[i];
+			split_leaf->key[i-(N/2)] = temp->key[i];
 		}
 
-		for(int i = (N/2); i < N; i++){
-			new_leaf->chi[i-(N/2)] = temp_block->chi[i];
-			new_leaf->key[i-(N/2)] = temp_block->key[i];
-		}
-		new_leaf->nkey = 2;
-		new_leaf->isLeaf = true;
-		new_leaf->parent = leaf->parent;
-		
-		free(temp_block);
-		temp_block = NULL;
+		free(temp);
+		temp = NULL;
 
-		int parent_key = new_leaf->key[0];
+		split_leaf->isLeaf = true;
+		split_leaf->nkey = 2;
 
-		insert_in_parent(leaf, parent_key, new_leaf);
+		parent_key = split_leaf->key[0];
+
+		insert_in_parent(leaf, parent_key, (DATA *)split_leaf);
 
 	}
 }
 
-void
-init_root(void)
+
+NODE*
+search_key(NODE * node, int key, int *count)
 {
-	Root = NULL;
-}
+	int kid;
 
-int 
-interactive()
-{
-  int key;
+	if (node->isLeaf){
+		for(int i = 0; i < node->nkey; i++){
+			if (key == node->key[i]){
+				*count  += 1;
+				return 0;
+			}
+		}
 
-  std::cout << "Key: ";
-  std::cin >> key;
+		return 0;
+	}
 
-  return key;
+	for (kid = 0; kid < node->nkey; kid++) {
+		if (key < node->key[kid]) break;
+	}
+
+	return search_key(node->chi[kid], key, count);
+
 }
 
 int
 main(int argc, char *argv[])
 {
-  struct timeval begin, end;
+	int key;
+	int count = 0;
+
+  	std::vector<int> vec;
+	srand(10);
 
 	init_root();
 
-	printf("-----Insert-----\n");
-	begin = cur_time();
-  	while (true) {
-		insert(interactive(), NULL);
-    	print_tree(Root);
-  	}
-	end = cur_time();
 
-	return 0;
+	printf("-----Insert-----\n");
+
+	for (key = 1; key < DATA_NUMBER+1; key++) {
+        vec.push_back(rand()+1);
+  	}
+
+	for(key = 0; key < DATA_NUMBER; key++){
+		insert(vec[key], NULL);
+	}
+
+	print_tree(Root);
+
+
+	printf("-----Search-----\n");
+
+	for(key = 0; key < DATA_NUMBER; key++){
+		search_key(Root, vec[key], &count);
+	}
+	printf("%d\n", count);
+
+
+  	return 0;
+
 }
