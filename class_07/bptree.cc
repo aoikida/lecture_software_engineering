@@ -1,7 +1,7 @@
 #include "bptree.h"
 #include <vector>
 
-#define DATA_NUMBER 100
+#define DATA_NUMBER 10000000
 
 void
 delete_entry(NODE *node, int key, DATA *data, bool node_is_predecessor);
@@ -388,10 +388,35 @@ search_key(NODE * node, int key, int *count)
 
 }
 
+NODE*
+update(NODE* node, DATA* record, int *count)
+{
+	int kid;
+
+	if (node->isLeaf){
+		for(int i = 0; i < node->nkey; i++){
+			if (node->key[i] == record->key){
+				record->val = 2; //update
+				return 0;
+			}
+		}
+
+		return 0;
+	}
+
+	for (kid = 0; kid < node->nkey; kid++) {
+		if (record->key < node->key[kid]) break;
+	}
+
+	return update(node->chi[kid], record, count);
+
+}
+
 int
 main(int argc, char *argv[])
 {
-	uint i;
+	int i;
+	int count = 0;
 
   	std::vector<DATA> record_set(DATA_NUMBER);
 	srand(10);
@@ -403,22 +428,34 @@ main(int argc, char *argv[])
 
 	for(i = 0; i < DATA_NUMBER; i++){
 		(&record_set[i])->key = i+1;
+		(&record_set[i])->val = 1;
 		insert((&record_set[i])->key, (&record_set[i])->next);
 	}
 
 	print_tree(Root);
 	
 
-	/*
+	
 	printf("-----Search-----\n");
 
-	for(key = 0; key < DATA_NUMBER; key++){
-		search_key(Root, vec[key], &count);
+	for(i = 0; i < DATA_NUMBER; i++){
+		search_key(Root, (&record_set[i])->key, &count);
 	}
+
 	printf("%d\n", count);
 
-	*/
-
+	printf("------UPDATE------\n");
+	//before UPDATE
+	for(i = 0; i < DATA_NUMBER; i++){
+		cout << (&record_set[i])->val;
+	}
+	for(i = 0; i < DATA_NUMBER; i++){
+		update(Root, &record_set[i], &count);
+	}
+	//after UPDATE
+	for(i = 0; i < DATA_NUMBER; i++){
+		cout << (&record_set[i])->val;
+	}
 
   	return 0;
 
