@@ -396,7 +396,7 @@ update(NODE* node, DATA* record, int *count)
 	if (node->isLeaf){
 		for(int i = 0; i < node->nkey; i++){
 			if (node->key[i] == record->key){
-				record->val = 2; //update
+				((DATA*)(node->chi[i]))->val = 2; //update
 				return 0;
 			}
 		}
@@ -429,7 +429,7 @@ main(int argc, char *argv[])
 	for(i = 0; i < DATA_NUMBER; i++){
 		(&record_set[i])->key = i+1;
 		(&record_set[i])->val = 1;
-		insert((&record_set[i])->key, (&record_set[i])->next);
+		insert((&record_set[i])->key, &record_set[i]);
 	}
 
 	print_tree(Root);
@@ -449,6 +449,8 @@ main(int argc, char *argv[])
 	for(i = 0; i < DATA_NUMBER; i++){
 		cout << (&record_set[i])->val;
 	}
+	cout << endl;
+	//UPDATE
 	for(i = 0; i < DATA_NUMBER; i++){
 		update(Root, &record_set[i], &count);
 	}
@@ -456,6 +458,7 @@ main(int argc, char *argv[])
 	for(i = 0; i < DATA_NUMBER; i++){
 		cout << (&record_set[i])->val;
 	}
+	cout << endl;
 
   	return 0;
 
