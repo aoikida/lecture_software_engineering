@@ -7,8 +7,9 @@
 #include <assert.h>
 #include <strings.h>
 #include <math.h>
-#include "debug.h"
 #include <iostream>
+#include "debug.h"
+#include "rwlock.hh"
 using namespace std;
 #define MAX_OBJ (1000*1000)
 #define N 4
@@ -16,7 +17,7 @@ using namespace std;
 typedef struct _DATA {
 	int key;
 	int val;
-	pthread_rwlock_t rwlock;
+	RWLock rwlock;
 	struct _DATA *next;
 	
 } DATA;
