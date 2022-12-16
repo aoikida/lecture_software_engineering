@@ -16,21 +16,28 @@ void
 worker() {
 	
 	for(int i = 0; i < NUM_TRANSACTION; ++i){
+		std::vector<int> index_set;
 		std::random_device rnd;    
 		std::mt19937 mt(rnd());     
-		std::uniform_int_distribution<> random(0, DATA_NUMBER-1);       
+		std::uniform_int_distribution<> random(0, DATA_NUMBER-1);
+		for (int k = 0; k < NUM_OPERATION; ++k){
+			index_set.emplace_back(random(mt));
+		}      
 		RETRY :
 		for(int j = 0; j < NUM_OPERATION; ++j){
-		DATA * record = &record_set[random(mt)];
-		if (record->rwlock.r_trylock()) {
-			if (search_key(Root, record->key) == 1) {
-				cout << record->key << "はデータベースにありません" << endl;
+			DATA * record = &record_set[index_set[j]];
+			if (record->rwlock.r_trylock()) {
+				if (search_key(Root, record->key) == 1) {
+					cout << record->key << "はデータベースにありません" << endl;
+				}
 			}
+			else { 
+				goto RETRY;
+			}
+    	}
+		for(int j = 0; j < NUM_OPERATION; ++j){
+			(&record_set[index_set[j]])->rwlock.r_unlock();
 		}
-		else { 
-			goto RETRY;
-		}
-    }
 	}
 
 	cout << "finish read-only transaction" << endl;
