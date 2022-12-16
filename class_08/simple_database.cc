@@ -5,15 +5,15 @@
 
 
 #define DATA_NUMBER 100000
-#define NUM_THREAD 8
-#define NUM_TRANSACTION 100000
+#define NUM_THREAD 4
+#define NUM_TRANSACTION 1000
 #define NUM_OPERATION 16
 
 std::vector<DATA> record_set(DATA_NUMBER);
 
 
 void
-worker() {
+read_only_worker(int thread_id) {
 	
 	for(int i = 0; i < NUM_TRANSACTION; ++i){
 		std::vector<int> index_set;
@@ -27,8 +27,11 @@ worker() {
 		for(int j = 0; j < NUM_OPERATION; ++j){
 			DATA * record = &record_set[index_set[j]];
 			if (record->rwlock.r_trylock()) {
-				if (search_key(Root, record->key) == 1) {
-					cout << record->key << "はデータベースにありません" << endl;
+				if (search_key(Root, record->key) == 0) {
+					//cout << record->key << "is found" << endl;
+				}
+				else {
+					//cout << record->key << "is not found" << endl;
 				}
 			}
 			else { 
@@ -40,7 +43,7 @@ worker() {
 		}
 	}
 
-	cout << "finish read-only transaction" << endl;
+	cout  << "thread" << thread_id << " : finish read-only transaction" << endl;
 }
 
 int
@@ -89,7 +92,7 @@ main(int argc, char *argv[])
 	std::vector<std::thread> threads;
 
 	for (size_t i = 0; i < NUM_THREAD; ++i) {
-        threads.emplace_back(std::thread(worker));
+        threads.emplace_back(read_only_worker, i);
     }
 
 	for(auto& thread : threads){
