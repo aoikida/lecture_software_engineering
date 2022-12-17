@@ -20,7 +20,7 @@ using namespace std;
 typedef struct _DATA {
 	int key;
 	int val;
-	RWLock rwlock;
+	RWLock lock;
 	struct _DATA *next;
 	
 } DATA;
@@ -406,7 +406,7 @@ insert(int key, DATA *data)
 }
 
 
-int
+DATA *
 search_key(NODE * node, int key)
 {
 	int kid;
@@ -414,11 +414,11 @@ search_key(NODE * node, int key)
 	if (node->isLeaf){
 		for(int i = 0; i < node->nkey; i++){
 			if (key == node->key[i]){
-				return 0;
+				return (DATA*)(node->chi[i]); 
 			}
 		}
 		//失敗時
-		return -1;
+		return 0;
 	}
 
 	for (kid = 0; kid < node->nkey; kid++) {

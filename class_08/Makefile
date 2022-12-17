@@ -11,7 +11,7 @@ all: $(T1)
 $(T1): $(OBJ_T1)
 	$(CC) $(LDFLAGS) -o $@ $^
 
-.cc.o:
+.cc.o: 
 	$(CC) $(CFLAGS) $<
 
 clean:
