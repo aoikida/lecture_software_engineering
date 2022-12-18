@@ -1,14 +1,15 @@
-#include "bptree.h"
+#include "bptree.hh"
 #include "procedure.hh"
 #include "random.hh"
 #include "rwlock.hh"
 #include "transaction.hh"
-
+#include "common.hh"
+#include "record.hh" 
 #include <vector>
-#include <unistd.h>
+#include <unistd.h> 
 
 void
-worker(int thread_id) {
+worker(int thread_id) { 
 
 	int i;
 	std::vector<DATA> transaction_set;
@@ -18,28 +19,30 @@ worker(int thread_id) {
 	std::vector<int> write_set;
 	std::vector<RWLock *> r_lock_list;
   std::vector<RWLock *> w_lock_list;
-	bool abort_flag = false;
+	bool abort_flag = false;   
 	
 	for(i = 0; i < NUM_TRANSACTION; ++i){
 		rnd.init();
 		makeTransaction(transaction, rnd);
 RETRY :
+		//Execute transaction
 		for (auto itr = transaction.begin(); itr != transaction.end(); ++itr) {
 
       if ((*itr).ope_ == Ope::READ) {
-				readOperation((*itr).key_, r_lock_list, w_lock_list, read_set, write_set, abort_flag);
+				executeRead((*itr).key_, read_set, write_set, r_lock_list, w_lock_list, abort_flag);
 			} 
 			else if ((*itr).ope_ == Ope::WRITE) {
-        writeOperation((*itr).key_, r_lock_list, w_lock_list, read_set, write_set, abort_flag);
+        executeWrite((*itr).key_, read_set, write_set, r_lock_list, w_lock_list, abort_flag);
       } 
 
-			if (abort_flag == true){ //abort
+			//Abort
+			if (abort_flag == true){ 
 			unlock(read_set, write_set, r_lock_list, w_lock_list);
 			abort_flag = false;
 			goto RETRY;
 			}
     }
-		//commit
+		//Commit
 		unlock(read_set, write_set, r_lock_list, w_lock_list);
 	}
 }
@@ -56,7 +59,7 @@ main(int argc, char *argv[])
 
 	std::vector<std::thread> threads;
 
-	//make database
+	//Make database
 	for(i = 0; i < NUM_RECORD; i++){
 		(&record_set[i])->key = i;
 		(&record_set[i])->val = 1;
@@ -64,14 +67,14 @@ main(int argc, char *argv[])
 		(&record_set[i])->next = &record_set[i+1];
 	}
 
-	//make index
+	//Make index
 	init_root();
 
 	for(i = 0; i < NUM_RECORD; i++){
 		insert((&record_set[i])->key, &record_set[i]);
 	}
 
-	//start measurement
+	//Start measurement
 	clock_gettime(CLOCK_REALTIME, &start_time);
 
 	for (int i = 0; i < NUM_THREAD; ++i) {

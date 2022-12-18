@@ -1,18 +1,11 @@
-#include "bptree.h"
+#include "bptree.hh"
 #include "procedure.hh"
 #include "random.hh"
 #include "rwlock.hh"
+#include "common.hh"
 
 #include <vector>
 #include <unistd.h>
-
-#define NUM_RECORD 1000
-#define NUM_THREAD 4
-#define NUM_TRANSACTION 10000
-#define NUM_OPERATION 16
-#define R_RATIO 100
-
-std::vector<DATA> record_set(NUM_RECORD);
 
 void
 makeTransaction(std::vector <Procedure> &transaction, Xoroshiro128Plus &rnd){
@@ -22,7 +15,7 @@ makeTransaction(std::vector <Procedure> &transaction, Xoroshiro128Plus &rnd){
     // decide access destination key.
     record_index = rnd.next() % NUM_RECORD;
 
-    // decide operation type.プロシージャに代入している。
+    // decide operation type.
     if ((rnd.next() % 100) < R_RATIO) {
       transaction.emplace_back(Ope::READ, (&record_set[record_index])->key);
     } else {
@@ -49,7 +42,7 @@ void unlock(std::vector<int>& read_set, std::vector<int>& write_set, std::vector
 }
 
 
-void readOperation(int key, std::vector<RWLock *>& r_lock_list, std::vector<RWLock *>& w_lock_list, std::vector<int>& read_set, std::vector<int>& write_set, bool &abortFlag){
+void executeRead(int key, std::vector<int>& read_set, std::vector<int>& write_set, std::vector<RWLock *>& r_lock_list, std::vector<RWLock *>& w_lock_list, bool &abortFlag){
 
 	DATA * record;
 
@@ -82,7 +75,7 @@ FINISH_READ:
 }
 
 
-void writeOperation(int key, std::vector<RWLock *>& r_lock_list, std::vector<RWLock *>& w_lock_list, std::vector<int>& read_set, std::vector<int>& write_set, bool &abortFlag){
+void executeWrite(int key, std::vector<int>& read_set, std::vector<int>& write_set, std::vector<RWLock *>& r_lock_list, std::vector<RWLock *>& w_lock_list, bool &abortFlag){
 
 	DATA * record;
 

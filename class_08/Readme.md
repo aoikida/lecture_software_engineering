@@ -26,22 +26,24 @@ I implemented simple_database.
 
 ### Result
 
-#### read-only transaction 1 thread vs 4 thread
+#### read-only transaction 1 thread vs 4 thread vs 16 threads
 
-* 1 thread : 52403 tx/s
+* 1 thread : 45056 tx/s
 
 * 4 thread : 112456 tx/s
 
+* 16 thread : 61017 tx/s
+
 #### read-only transaction vs write-only transaction with 16 threads and 1000 records
 
-* read-only : 73334 tx/s
+* read-only : 68794 tx/s
 
-* write-only : 49093 tx/s
+* write-only : 47817 tx/s
 
 #### read50%-write% transaction 1000 records vs 1M records with 16 threads
 
-* 1000 records : 25086 tx/s
+* 1000 records :  57391 tx/s
 
-* 1M records : 64230 tx/s
+* 1M records : 67125 tx/s
 
 

@@ -11,19 +11,12 @@
 #include <math.h>
 #include <iostream>
 #include <vector>
-#include "debug.h"
+#include "common.hh"
 #include "rwlock.hh"
+#include "record.hh"
 using namespace std;
 #define MAX_OBJ (1000*1000)
 #define N 4
-
-typedef struct _DATA {
-	int key;
-	int val;
-	RWLock lock;
-	struct _DATA *next;
-	
-} DATA;
 
 typedef struct _NODE {
 	bool isLeaf;
