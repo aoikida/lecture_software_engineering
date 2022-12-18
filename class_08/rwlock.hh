@@ -99,7 +99,7 @@ public:
     int expected, desired(-1);
     expected = counter.load(memory_order_acquire);
     for (;;) {
-      if (expected != 1) return false;
+      if (expected != 1) return false; //read_set.clear()しないとここに引っかかってしまう。
 
       if (counter.compare_exchange_strong(expected, desired,
                                           std::memory_order_acq_rel))
@@ -107,3 +107,13 @@ public:
     }
   }
 };
+
+/* tryupgradeで生じたバグ
+  状況は、read-write混合のトランザクションを実行した。
+  そしてabort or commit時にread_setとwrite_setの初期化を行わなかった。
+  その場合、transactionがabortし続けるというバグが生じた。
+  その理由は、read_setとwrite_setの初期化を行わないと、read-lockが取得されていないのに、
+  tryupgradeを呼び出してしまう。
+  tryupgradeはread-lockをwrite-lockにupgradeする関数で、
+  そのトランザクションによってread-lockが取得されていないと、abortする。
+*/

@@ -2,91 +2,10 @@
 #include "procedure.hh"
 #include "random.hh"
 #include "rwlock.hh"
+#include "transaction.hh"
 
 #include <vector>
 #include <unistd.h>
-
-#define NUM_RECORD 10
-#define NUM_THREAD 2
-#define NUM_TRANSACTION 1
-#define NUM_OPERATION 16
-#define R_RATIO 100
-
-std::vector<DATA> record_set(NUM_RECORD);
-
-
-void unlock(std::vector<RWLock *>& r_lock_list, std::vector<RWLock *>& w_lock_list) {
-  for (auto itr = r_lock_list.begin(); itr != r_lock_list.end(); ++itr)
-    (*itr)->r_unlock();
-
-  for (auto itr = w_lock_list.begin(); itr != w_lock_list.end(); ++itr)
-    (*itr)->w_unlock();
-
-  /**
-   * Clean-up local lock set.
-   */
-  r_lock_list.clear();
-  w_lock_list.clear();
-}
-
-void readOperation(int key, std::vector<RWLock *>& r_lock_list, std::vector<RWLock *>& w_lock_list, bool &abortFlag){
-
-	DATA * record;
-
-	record = search_key(Root, key);
-
-	if (record->lock.r_trylock()) {
-		r_lock_list.emplace_back(&record->lock);
-	} else {
-		abortFlag = true;
-		goto FINISH_READ;
-	}
-
-	//read operation
-FINISH_READ:
-
-	return;
-
-}
-
-void writeOperation(int key, std::vector<RWLock *>& r_lock_list, std::vector<RWLock *>& w_lock_list, bool &abortFlag){
-
-	DATA * record;
-
-	record = search_key(Root, key);
-
-	if (record->lock.w_trylock()) {
-		w_lock_list.emplace_back(&record->lock);
-	} 
-	else {
-		abortFlag = true;
-		goto FINISH_WRITE;
-	}
-
-	//write operation
-FINISH_WRITE:
-
-	return;
-	
-}
-
-void
-makeTransaction(std::vector <Procedure> &transaction, Xoroshiro128Plus &rnd){
-	transaction.clear();
-	for (int i = 0; i < NUM_OPERATION; ++i) {
-    uint64_t record_key;
-    // decide access destination key.
-    record_key = rnd.next() % NUM_RECORD;
-
-    // decide operation type.プロシージャに代入している。
-    if ((rnd.next() % 100) < R_RATIO) {
-      transaction.emplace_back(Ope::READ, record_key);
-    } else {
-      transaction.emplace_back(Ope::WRITE, record_key);
-    }
-  }
-}
-
 
 void
 worker(int thread_id) {
@@ -95,6 +14,8 @@ worker(int thread_id) {
 	std::vector<DATA> transaction_set;
 	std::vector<Procedure> transaction;
 	Xoroshiro128Plus rnd;
+	std::vector<int> read_set;
+	std::vector<int> write_set;
 	std::vector<RWLock *> r_lock_list;
   std::vector<RWLock *> w_lock_list;
 	bool abort_flag = false;
@@ -106,24 +27,21 @@ RETRY :
 		for (auto itr = transaction.begin(); itr != transaction.end(); ++itr) {
 
       if ((*itr).ope_ == Ope::READ) {
-				readOperation((*itr).key_, r_lock_list, w_lock_list, abort_flag);
+				readOperation((*itr).key_, r_lock_list, w_lock_list, read_set, write_set, abort_flag);
 			} 
 			else if ((*itr).ope_ == Ope::WRITE) {
-        writeOperation((*itr).key_, r_lock_list, w_lock_list, abort_flag);
+        writeOperation((*itr).key_, r_lock_list, w_lock_list, read_set, write_set, abort_flag);
       } 
 
 			if (abort_flag == true){ //abort
-			unlock(r_lock_list, w_lock_list);
-			//cout << thread_id <<  "abort" << endl;
+			unlock(read_set, write_set, r_lock_list, w_lock_list);
 			abort_flag = false;
-			sleep(1);
 			goto RETRY;
 			}
     }
 		//commit
-		unlock(r_lock_list, w_lock_list);
+		unlock(read_set, write_set, r_lock_list, w_lock_list);
 	}
-	cout << thread_id <<  "end" << endl;
 }
 
 int
@@ -138,8 +56,6 @@ main(int argc, char *argv[])
 
 	std::vector<std::thread> threads;
 
-	init_root();
-
 	//make database
 	for(i = 0; i < NUM_RECORD; i++){
 		(&record_set[i])->key = i;
@@ -148,27 +64,14 @@ main(int argc, char *argv[])
 		(&record_set[i])->next = &record_set[i+1];
 	}
 
-	printf("-----Insert-----\n");
-	
+	//make index
+	init_root();
+
 	for(i = 0; i < NUM_RECORD; i++){
 		insert((&record_set[i])->key, &record_set[i]);
 	}
 
-	//print_tree(Root);
-
-	/*
-	std::vector<std::thread> worker_threads;
-
-	
-    for (size_t i = 0; i < NUM_THREAD; ++i) {
-      threads.push_back(worker);
-    }
-
-	for(size_t i = 0; i < NUM_THREAD; ++i) {
-		threads[i].join();
-	}
-	*/
-
+	//start measurement
 	clock_gettime(CLOCK_REALTIME, &start_time);
 
 	for (int i = 0; i < NUM_THREAD; ++i) {
@@ -185,39 +88,15 @@ main(int argc, char *argv[])
   nsec = end_time.tv_nsec - start_time.tv_nsec;
 
   d_sec = (double)sec + (double)nsec / (1000 * 1000 * 1000);
-
-  printf("time:%f\n", d_sec);
-	printf("throughput:%f\n", (NUM_TRANSACTION * NUM_THREAD)/d_sec);
-
-	/*
-	
-	printf("-----Search-----\n");
-
-	for(i = 0; i < DATA_NUMBER; i++){
-		search_key(Root, (&record_set[i])->key);
-	}
-
-	printf("%d\n", count);
-
-	
-
-	printf("------UPDATE------\n");
-	//before UPDATE
-	for(i = 0; i < DATA_NUMBER; i++){
-		cout << (&record_set[i])->val;
-	}
-	cout << endl; 
-	//UPDATE
-	for(i = 0; i < DATA_NUMBER; i++){
-		update(Root, &record_set[i]);
-	}
-	//after UPDATE
-	for(i = 0; i < DATA_NUMBER; i++){
-		cout << (&record_set[i])->val;
-	}
-	cout << endl;
-
-	*/
+	cout << "--------------------" << endl;
+	cout <<"Num Record: " << NUM_RECORD << endl;
+	cout <<"Num Transaction: " << NUM_TRANSACTION << endl;
+	cout <<"Workload: " << "Read"<< R_RATIO<< "% " << "Write" << 100 - R_RATIO << "%" << endl;
+	cout <<"Num Operation: " << NUM_OPERATION << endl;
+	cout <<"Num Thread: " << NUM_THREAD << endl;
+  printf("Time: %f\n", d_sec);
+	printf("Throughput: %f\n", (NUM_TRANSACTION * NUM_THREAD)/d_sec);
+	cout << "--------------------" << endl;
 
   return 0;
 
