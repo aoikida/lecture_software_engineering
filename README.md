@@ -35,4 +35,4 @@ bptree : update (lock, update)
 
 ## class 8
 
-simple_database : can execute transaction
+simple_database : can execute transaction with SS2PL
