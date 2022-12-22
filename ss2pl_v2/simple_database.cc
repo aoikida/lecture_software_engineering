@@ -8,10 +8,7 @@
 #include <vector>
 #include <unistd.h> 
 
-std::vector<DATA> record_set(NUM_RECORD);
-Bptree bptree;
-
-
+Tuple *Table;
 
 void
 makeTransaction(std::vector <Procedure> &pro, Xoroshiro128Plus &rnd){
@@ -23,9 +20,9 @@ makeTransaction(std::vector <Procedure> &pro, Xoroshiro128Plus &rnd){
 
     // decide operation type.
     if ((rnd.next() % 100) < R_RATIO) {
-      pro.emplace_back(Ope::READ, (&record_set[record_index])->key);
+      pro.emplace_back(Ope::READ, record_index);
     } else {
-      pro.emplace_back(Ope::WRITE, (&record_set[record_index])->key);
+      pro.emplace_back(Ope::WRITE, record_index);
     }
   } 
 }
@@ -66,7 +63,6 @@ RETRY :
 int
 main(int argc, char *argv[])
 {
-	unsigned int i;
   unsigned int sec;
   int nsec;
   double d_sec;
@@ -75,19 +71,7 @@ main(int argc, char *argv[])
 	std::vector<std::thread> threads;
 
 	//Make database
-	for(i = 0; i < NUM_RECORD; i++){
-		(&record_set[i])->key = i;
-		(&record_set[i])->val = 1;
-		(&record_set[i])->lock.init();
-		(&record_set[i])->next = &record_set[i+1];
-	}
-
-	//Make index
-	bptree.init_root();
-
-	for(i = 0; i < NUM_RECORD; i++){
-		bptree.insert((&record_set[i])->key, &record_set[i]);
-	}
+	posix_memalign((void **) &Table, 4096, NUM_RECORD * sizeof(Tuple));
 
 	//Start measurement
 	clock_gettime(CLOCK_REALTIME, &start_time);

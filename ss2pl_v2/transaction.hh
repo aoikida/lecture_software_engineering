@@ -44,4 +44,5 @@ public:
 
   void commit();
 
+  Tuple *get_tuple(Tuple *table, uint64_t key) { return &table[key]; }
 };

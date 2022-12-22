@@ -4,10 +4,10 @@
 #include "procedure.hh"
 #include "rwlock.hh"
 #include "record.hh"
-#include "common.hh"
 #include "bptree.hh"
+#include "tuple.hh"
 
-extern Bptree bptree;
+extern Tuple *Table;
 
 
 void TxExecutor::begin() { 
@@ -16,7 +16,7 @@ void TxExecutor::begin() {
 
 void TxExecutor::read(int key){
 
-  DATA * record = bptree.search_key(bptree.Root, key);
+  Tuple *tuple = get_tuple(Table, key);
 
   //the key is already read or written by this transaction
   for (auto itr = read_set_.begin(); itr != read_set_.end(); ++itr){
@@ -29,9 +29,9 @@ void TxExecutor::read(int key){
       goto FINISH_READ;
   }
 
-  if (record->lock.r_trylock()) {
+  if (tuple->lock.r_trylock()) {
     read_set_.emplace_back(key);
-    r_lock_list_.emplace_back(&record->lock);
+    r_lock_list_.emplace_back(&tuple->lock);
   } else {
     status_ = TransactionStatus::aborted;
     goto FINISH_READ;
@@ -45,7 +45,7 @@ FINISH_READ:
 
 void TxExecutor::write(int key){
 
-  DATA * record = bptree.search_key(bptree.Root, key);
+  Tuple *tuple = get_tuple(Table, key);
 
 	//the key is already written by this transaction
   for (auto itr = write_set_.begin(); itr != write_set_.end(); ++itr){
@@ -56,14 +56,14 @@ void TxExecutor::write(int key){
 	//the key is already read by this transaction, so need to upgrade lock
   for (auto itr = read_set_.begin(); itr != read_set_.end(); ++itr){
 		if(key == *itr){
-      if (!record->lock.tryupgrade()) {
+      if (!tuple->lock.tryupgrade()) {
         status_ = TransactionStatus::aborted;
         goto FINISH_WRITE;
       }
       for (auto lItr = r_lock_list_.begin(); lItr != r_lock_list_.end(); ++lItr) {
-        if (*lItr == &record->lock) {
+        if (*lItr == &tuple->lock) {
           write_set_.emplace_back(key);
-          w_lock_list_.emplace_back(&record->lock);
+          w_lock_list_.emplace_back(&tuple->lock);
           r_lock_list_.erase(lItr);
           break;
         }
@@ -74,11 +74,12 @@ void TxExecutor::write(int key){
     }
   }
 
-	
+  
+
 	  //the key is not read or written by this transaction.
-  if (record->lock.w_trylock()) {
+  if (tuple->lock.w_trylock()) {
     write_set_.emplace_back(key);
-    w_lock_list_.emplace_back(&record->lock);
+    w_lock_list_.emplace_back(&tuple->lock);
   } 
   else {
     status_ = TransactionStatus::aborted;

@@ -1,7 +1,6 @@
 #pragma once
 
-#include "record.hh"
-#include "bptree.hh"
+#include "tuple.hh"
 
 #include <vector>
 
