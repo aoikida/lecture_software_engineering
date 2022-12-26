@@ -68,6 +68,7 @@ void executeRead(int key, std::vector<int>& read_set, std::vector<int>& write_se
 	}
 
 	//read operation
+	search_key(Root, record->key);
 FINISH_READ:
 
 	return;
@@ -120,6 +121,7 @@ void executeWrite(int key, std::vector<int>& read_set, std::vector<int>& write_s
 	}
 
 	//write operation
+	update(Root, record);
 FINISH_WRITE:
 
 	return;

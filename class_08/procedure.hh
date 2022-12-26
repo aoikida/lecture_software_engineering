@@ -15,8 +15,6 @@ class Procedure {
 public:
   Ope ope_;
   uint64_t key_;
-  bool ronly_ = false;
-  bool wonly_ = false;
 
   Procedure() : ope_(Ope::READ), key_(0) {}
 

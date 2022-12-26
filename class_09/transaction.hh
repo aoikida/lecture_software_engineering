@@ -14,7 +14,6 @@ makeTransaction(std::vector <Procedure> &transaction, Xoroshiro128Plus &rnd){
     uint64_t record_index;
     // decide access destination key.
     record_index = rnd.next() % NUM_RECORD;
-
     // decide operation type.
     if ((rnd.next() % 100) < R_RATIO) {
       transaction.emplace_back(Ope::READ, (&record_set[record_index])->key);

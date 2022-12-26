@@ -20,6 +20,8 @@ worker(int thread_id) {
 	std::vector<RWLock *> r_lock_list;
   std::vector<RWLock *> w_lock_list;
 	bool abort_flag = false;   
+	Xoroshiro128Plus backoff_rnd;
+	uint64_t sleep_time;
 	
 	for(i = 0; i < NUM_TRANSACTION; ++i){
 		rnd.init();
@@ -39,7 +41,7 @@ RETRY :
 			if (abort_flag == true){ 
 			unlock(read_set, write_set, r_lock_list, w_lock_list);
 			abort_flag = false;
-			usleep(1);
+			usleep(thread_id);
 			goto RETRY;
 			}
     }

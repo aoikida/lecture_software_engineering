@@ -92,6 +92,7 @@ main(int argc, char *argv[])
 
   d_sec = (double)sec + (double)nsec / (1000 * 1000 * 1000);
 	cout << "--------------------" << endl;
+	cout << "Standard no-wait" << endl;
 	cout <<"Num Record: " << NUM_RECORD << endl;
 	cout <<"Num Transaction: " << NUM_TRANSACTION << endl;
 	cout <<"Workload: " << "Read"<< R_RATIO<< "% " << "Write" << 100 - R_RATIO << "%" << endl;
